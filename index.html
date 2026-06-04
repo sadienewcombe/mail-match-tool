@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mail Match</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a;background:#f9f9f7;min-height:100vh;padding:2rem 1rem}
+  .wrap{width:fit-content;min-width:620px;max-width:100%;margin:0 auto;background:#fff;border-radius:12px;border:0.5px solid #ddd;padding:2rem}
+  h1{font-size:20px;font-weight:600;margin-bottom:0.25rem}
+  .sub{font-size:13px;color:#666;margin-bottom:2rem}
+  .section{margin-bottom:1.5rem}
+  .lbl{font-size:12px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px}
+  .drop{border:1.5px dashed #ccc;border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;transition:background 0.15s;position:relative}
+  .drop:hover{background:#f5f5f3}
+  .drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .drop-icon{font-size:18px;margin-bottom:5px;color:#999}
+  .drop-label{font-size:13px;color:#666}
+  .drop-label strong{color:#1a1a1a;font-weight:500}
+  .fset{background:#f5f5f3;border-radius:8px;padding:10px 14px;font-size:13px;display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+  .fname{font-family:'SF Mono',Menlo,monospace;font-size:12px;color:#8b5e0a}
+  .frows{font-size:11px;color:#888;margin-left:6px}
+  .clr{background:none;border:none;cursor:pointer;color:#aaa;font-size:16px;padding:0 4px;line-height:1}
+  .clr:hover{color:#1a1a1a}
+  .fdetail{background:#f5f5f3;border:0.5px solid #e8e8e8;border-radius:8px;padding:14px;margin-top:4px}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .field{display:flex;flex-direction:column;gap:3px}
+  .field label{font-size:11px;color:#777;text-transform:uppercase;letter-spacing:0.04em;font-weight:500}
+  .field input,.field select{font-size:12px;padding:6px 9px;border-radius:7px;border:0.5px solid #ccc;background:#fff;color:#1a1a1a;width:100%;font-family:inherit}
+  .field input:focus,.field select:focus{outline:none;border-color:#8b5e0a}
+  .sec-lbl{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px}
+  .divider{border:none;border-top:0.5px solid #e5e5e5;margin:1.5rem 0}
+  .run-btn{width:100%;padding:11px;font-size:14px;font-weight:500;border-radius:8px;border:none;background:#1a1a1a;color:#fff;cursor:pointer;transition:opacity 0.15s}
+  .run-btn:hover{opacity:0.85}
+  .run-btn:disabled{opacity:0.3;cursor:not-allowed}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.25rem}
+  .stat{background:#f5f5f3;border-radius:8px;padding:12px}
+  .stat-n{font-size:20px;font-weight:600;font-family:'SF Mono',Menlo,monospace}
+  .stat-l{font-size:11px;color:#666;margin-top:2px}
+  .v-a{color:#8b5e0a}.v-g{color:#2d6a1e}.v-r{color:#b52b2b}.v-b{color:#1a4e8a}
+  .mrow{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:5px;font-size:12px;margin-bottom:2px}
+  .mrow:nth-child(odd){background:#f5f5f3}
+  .mc{font-family:'SF Mono',Menlo,monospace;font-size:12px;color:#8b5e0a;font-weight:600}
+  .mp{font-size:10px;color:#888;margin-left:5px}
+  .tabs{display:flex;border-bottom:1px solid #e5e5e5;margin-bottom:12px}
+  .tab{padding:8px 14px;font-size:12px;cursor:pointer;background:none;border:none;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit}
+  .tab.on{color:#8b5e0a;border-bottom-color:#8b5e0a}
+  .tw{border:0.5px solid #e5e5e5;border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th{background:#f5f5f3;color:#666;font-weight:600;text-align:left;padding:7px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.4px;border-bottom:0.5px solid #e5e5e5;white-space:nowrap}
+  td{padding:6px 10px;border-bottom:0.5px solid #f0f0f0;font-family:'SF Mono',Menlo,monospace;font-size:10px;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis;color:#333}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#fafaf8}
+  .tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-family:'SF Mono',Menlo,monospace;border:0.5px solid}
+  .tc{background:#fef3d7;border-color:#e8c06040;color:#6b4a08}
+  .ta{background:#e8f4e0;border-color:#7db86040;color:#2a5c15}
+  .tn{background:#e3eef9;border-color:#7aaee040;color:#1a3f6e}
+  .tl{background:#f5f5f3;border-color:#ccc;color:#666}
+  .pag{display:flex;justify-content:space-between;align-items:center;padding:8px 0 0}
+  .pi{font-size:11px;color:#888;font-family:'SF Mono',Menlo,monospace}
+  .pbtn{padding:5px 12px;border-radius:6px;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid #ccc;background:#fff;color:#1a1a1a}
+  .pbtn:hover{background:#f5f5f3}
+  .pbtn:disabled{opacity:.35;cursor:not-allowed}
+  .dl-btn{width:100%;padding:10px;font-size:13px;font-weight:500;border-radius:8px;border:0.5px solid #ccc;background:#fff;color:#1a1a1a;cursor:pointer;text-align:center;display:block;margin-bottom:8px;font-family:inherit}
+  .dl-btn:hover{background:#f5f5f3}
+  .dl-btn.primary-dl{background:#e8f4e0;border-color:#7db860;color:#2a5c15}
+  .dl-btn.primary-dl:hover{background:#d8ecd0}
+  .err{background:#fff0f0;color:#c0392b;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px;border:0.5px solid #f5c6c6}
+  .empty{text-align:center;padding:32px;color:#999;font-size:13px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Mail match</h1>
+  <p class="sub">Matches donors back to mail list segments using a 3-pass normalization approach.</p>
+
+  <div class="section">
+    <div class="lbl">Mailed List</div>
+    <div class="drop" id="mail-drop">
+      <input type="file" id="mail-input" accept=".csv,.xlsx,.xls" multiple>
+      <div class="drop-icon">↑</div>
+      <div class="drop-label"><strong>Upload mail list file(s)</strong> — accepts .csv, .xlsx, .xls, multiple OK</div>
+    </div>
+    <div id="mail-entries"></div>
+  </div>
+
+  <div class="section">
+    <div class="lbl">Donor file</div>
+    <div class="drop" id="donor-drop">
+      <input type="file" id="donor-input" accept=".csv,.xlsx,.xls">
+      <div class="drop-icon">↑</div>
+      <div class="drop-label"><strong>Upload donor file</strong> — accepts .csv, .xlsx, .xls</div>
+    </div>
+    <div id="donor-set" class="hidden">
+      <div class="fset">
+        <div><span class="fname" id="donor-fname"></span><span class="frows" id="donor-frows"></span></div>
+        <button class="clr" id="donor-clr">×</button>
+      </div>
+      <div class="fdetail" style="margin-top:4px">
+        <div class="sec-lbl">Column mapping</div>
+        <div class="g3" id="donor-cols"></div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <div class="err hidden" id="err-box"></div>
+  <div id="results" class="hidden"></div>
+  <button class="run-btn" id="run-btn" disabled>Run match</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+const SUFFIXES = new Set(['II','III','IIII','IV','V','JR','SR','MR','MRS','DR','VI','MS']);
+const Nu = s => s != null ? String(s).trim().toUpperCase() : '';
+function ct(s) {
+  s = Nu(s).replace(/\./g,'').replace(/&/g,'').trim();
+  const p = s.split(/\s+/).filter(x => x.length >= 2 && !SUFFIXES.has(x) && x !== 'AND');
+  return p[0] || s.replace(/\s+/g,'');
+}
+const CK  = (l,f,c,st) => `${ct(l)}, ${ct(f)}(${Nu(c)},${Nu(st)})`;
+const AK  = (a,c,st)   => `${Nu(a)} ${Nu(c)},${Nu(st)}`;
+const NMK = (l,f)      => { const v = `${ct(l)}${ct(f)}`; return v.length > 2 ? v : null; };
+
+// Parse "First Last" (space-separated) combined name — mirrors the Stata addressee logic:
+// clean each token, first valid token = first name, next valid token != first = last name
+function parseSpaceName(s) {
+  const tokens = Nu(s)
+    .replace(/\./g,'').replace(/&/g,'').replace(/"/g,'')
+    .split(/\s+/)
+    .filter(x => x.length >= 2 && !SUFFIXES.has(x) && x !== 'AND');
+  const first = tokens[0] || '';
+  const last  = tokens.find(t => t !== first) || '';
+  return { first, last };
+}
+
+const MHINTS = {
+  first:   ['first_name','firstname','first','donorfirstname','donorfirst','Donor First Name'],
+  last:    ['last_name','lastname','last','donorlastname','donorlast','Donor Last Name'],
+  address: ['address','addr','street','donoraddr1','Donor Addr1'],
+  city:    ['city','donorcity','Donor City','mailingcity','hcity'],
+  state:   ['state','st','donorstate','Donor State','mailingstate','hstate'],
+  zip:     ['zip','zipcode','postalcode','donorzip','Donor Zip','mailingzip','hzip'],
+};
+const DHINTS = {
+  ...MHINTS,
+  contactname: ['contact_name','contactname','contact name','fullname','full_name','name','addressee'],
+  amount: ['amount','amt','donation','contribution','total_amount','donationamount','receiptamt'],
+};
+
+function autoMap(headers, hints) {
+  const out = {};
+  for (const [f, cands] of Object.entries(hints)) {
+    const h = headers.find(h => cands.some(c => h.toLowerCase().replace(/[\s_-]/g,'') === c.replace(/[\s_-]/g,'')));
+    out[f] = h || '';
+  }
+  return out;
+}
+
+let mailEntries = [];
+let donorParsed = null;
+let donorColMap = {};
+let curTab = 'matched', curPage = 0;
+let lastResults = null;
+const PAGE = 50;
+
+function readExcel(file, sheet) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const sn = sheet && wb.Sheets[sheet] ? sheet : wb.SheetNames[0];
+        const data = XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: '', raw: false });
+        res({ data, headers: data.length ? Object.keys(data[0]) : [], sheets: wb.SheetNames, sheet: sn, isCsv: false });
+      } catch(err) { rej(err); }
+    };
+    fr.onerror = rej;
+    fr.readAsArrayBuffer(file);
+  });
+}
+
+function readCsv(file) {
+  return new Promise((res, rej) => {
+    Papa.parse(file, {
+      header: true, skipEmptyLines: true,
+      complete: r => res({ data: r.data, headers: r.meta.fields || [], sheets: null, sheet: null, isCsv: true }),
+      error: rej,
+    });
+  });
+}
+
+const readAny = (file, sheet) => /\.csv$/i.test(file.name) ? readCsv(file) : readExcel(file, sheet);
+
+function selOpts(headers, val) {
+  return `<option value="">— not mapped —</option>` +
+    headers.map(h => `<option value="${h}"${h === val ? ' selected' : ''}>${h}</option>`).join('');
+}
+
+function renderMailEntries() {
+  const el = document.getElementById('mail-entries');
+  if (!mailEntries.length) { el.innerHTML = ''; checkReady(); return; }
+  el.innerHTML = mailEntries.map((e, idx) => `
+    <div style="margin-top:6px">
+      <div class="fset">
+        <div><span class="fname">${e.file.name}</span><span class="frows">${e.rows.length.toLocaleString()} rows</span></div>
+        <button class="clr" onclick="removeMailEntry(${idx})">×</button>
+      </div>
+      <div class="fdetail">
+        <div class="${e.isCsv ? '' : 'g2'}" style="margin-bottom:12px">
+          ${!e.isCsv ? `
+          <div class="field">
+            <label>Sheet</label>
+            <select onchange="changeSheet(${idx}, this.value)">
+              ${e.sheets.map(s => `<option${s === e.sheet ? ' selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>` : ''}
+          <div class="field" style="${e.isCsv ? 'max-width:48%' : ''}">
+            <label>Segment label <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">(optional — overrides existing list column)</span></label>
+            <input type="text" placeholder="e.g. prospects, resolicit"
+              value="${e.label}"
+              oninput="mailEntries[${idx}].label = this.value; checkReady()">
+          </div>
+        </div>
+        <div class="sec-lbl">Column mapping</div>
+        <div class="g3">
+          ${Object.keys(MHINTS).map(f => `
+            <div class="field">
+              <label>${f}</label>
+              <select onchange="mailEntries[${idx}].colMap['${f}'] = this.value">
+                ${selOpts(e.headers, e.colMap[f] || '')}
+              </select>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+  checkReady();
+}
+
+function removeMailEntry(idx) { mailEntries.splice(idx, 1); renderMailEntries(); }
+
+async function changeSheet(idx, sheet) {
+  const entry = mailEntries[idx];
+  const p = await readExcel(entry.file, sheet);
+  entry.sheet = p.sheet; entry.headers = p.headers; entry.rows = p.data;
+  entry.colMap = autoMap(p.headers, MHINTS);
+  renderMailEntries();
+}
+
+document.getElementById('mail-input').addEventListener('change', async function() {
+  await handleMailFiles(Array.from(this.files));
+  this.value = '';
+});
+
+document.getElementById('donor-input').addEventListener('change', async function() {
+  if (this.files[0]) await handleDonorFile(this.files[0]);
+  this.value = '';
+});
+
+async function handleMailFiles(files) {
+  for (const file of files) {
+    try {
+      const p = await readAny(file);
+      mailEntries.push({ file, sheets: p.sheets, sheet: p.sheet, headers: p.headers, rows: p.data, colMap: autoMap(p.headers, MHINTS), label: '', isCsv: p.isCsv });
+    } catch(e) { showErr('Error reading ' + file.name + ': ' + e.message); }
+  }
+  renderMailEntries();
+}
+
+async function handleDonorFile(file) {
+  try {
+    const p = await readAny(file);
+    donorParsed = p;
+    donorColMap = autoMap(p.headers, DHINTS);
+    document.getElementById('donor-fname').textContent = file.name;
+    document.getElementById('donor-frows').textContent = p.data.length.toLocaleString() + ' rows · ' + p.headers.length + ' columns';
+    document.getElementById('donor-drop').classList.add('hidden');
+    document.getElementById('donor-set').classList.remove('hidden');
+    renderDonorCols();
+    checkReady();
+  } catch(e) { showErr('Error reading donor file: ' + e.message); }
+}
+
+// Use capture phase so these fire before browser default navigation
+window.addEventListener('dragover', e => e.preventDefault(), true);
+window.addEventListener('drop', e => {
+  e.preventDefault();
+  const files = Array.from(e.dataTransfer.files);
+  if (!files.length) return;
+  const valid = files.filter(f => /\.(csv|xlsx|xls)$/i.test(f.name));
+  if (!valid.length) return;
+  const mailDrop = document.getElementById('mail-drop');
+  const donorDrop = document.getElementById('donor-drop');
+  if (mailDrop.contains(e.target) || e.target === mailDrop) {
+    handleMailFiles(valid);
+  } else if ((donorDrop.contains(e.target) || e.target === donorDrop) && !donorDrop.classList.contains('hidden')) {
+    handleDonorFile(valid[0]);
+  }
+}, true);
+
+// Visual feedback on drag
+['mail-drop','donor-drop'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('dragenter', () => el.style.background = '#f0ede8');
+  el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) el.style.background = ''; });
+  el.addEventListener('drop', () => el.style.background = '');
+});
+
+document.getElementById('donor-clr').addEventListener('click', () => {
+  donorParsed = null; donorColMap = {};
+  document.getElementById('donor-drop').classList.remove('hidden');
+  document.getElementById('donor-set').classList.add('hidden');
+  document.getElementById('results').classList.add('hidden');
+  lastResults = null;
+  checkReady();
+});
+
+function renderDonorCols() {
+  document.getElementById('donor-cols').innerHTML = Object.keys(DHINTS).map(f => {
+    let lbl = f;
+    if (f === 'first') lbl = 'first name *';
+    if (f === 'last')  lbl = 'last name *';
+    if (f === 'contactname') lbl = 'contact name (last, first  or  first last) *';
+    const note = (f === 'first' || f === 'last')
+      ? ' <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa">— or use contact name</span>'
+      : '';
+    return `
+      <div class="field">
+        <label>${lbl}${note}</label>
+        <select onchange="donorColMap['${f}'] = this.value; checkReady()">
+          ${selOpts(donorParsed.headers, donorColMap[f] || '')}
+        </select>
+      </div>
+    `;
+  }).join('');
+}
+
+function checkReady() {
+  const hasName = (donorColMap.first && donorColMap.last) || donorColMap.contactname;
+  const ok = mailEntries.length > 0 && donorParsed && hasName;
+  document.getElementById('run-btn').disabled = !ok;
+}
+
+function buildLookups(entries) {
+  const bC = {}, bA = {}, bN = {};
+  for (const { rows, colMap: cm, label } of entries) {
+    for (const row of rows) {
+      const l = row[cm.last] || '', f = row[cm.first] || '';
+      const c = row[cm.city] || '', st = row[cm.state] || '';
+      const a = row[cm.address] || '';
+      // Spread all mail columns so they join through to matched output,
+      // then add matching-key fields. If a label was typed, it overrides as _list.
+      const meta = { ...row };
+      if (label.trim()) meta._list = label.trim();
+      meta._m_last = Nu(l); meta._m_first = Nu(f);
+      meta._m_city = Nu(c); meta._m_state = Nu(st);
+      const ck = CK(l,f,c,st), ak = AK(a,c,st), nk = NMK(l,f);
+      const akValid = ak.replace(/[\s,]/g,'').length > 0;
+      (bC[ck] = bC[ck] || []).push(meta);
+      if (akValid) (bA[ak] = bA[ak] || []).push(meta);
+      if (nk) (bN[nk] = bN[nk] || []).push(meta);
+    }
+  }
+  return { bC, bA, bN };
+}
+
+function runMatch(donorRows, dMap, lookups) {
+  const { bC, bA, bN } = lookups;
+  const matched = [], unmatched = [], seen = new Set();
+  for (const row of donorRows) {
+    // Support combined name field as alternative to separate first/last columns.
+    // Auto-detects format: "Last, First" (comma) or "First Last" (space-separated).
+    let l = row[dMap.last] || '', f = row[dMap.first] || '';
+    if (!l && !f && dMap.contactname && row[dMap.contactname]) {
+      const raw = String(row[dMap.contactname]);
+      if (raw.includes(',')) {
+        const parts = raw.split(',');
+        l = (parts[0] || '').trim();
+        f = (parts[1] || '').trim();
+      } else {
+        const parsed = parseSpaceName(raw);
+        f = parsed.first;
+        l = parsed.last;
+      }
+    }
+    const c = row[dMap.city] || '', st = row[dMap.state] || '';
+    const a = row[dMap.address] || '', amt = row[dMap.amount] || '';
+    const ck = CK(l,f,c,st), ak = AK(a,c,st), nk = NMK(l,f);
+    const akValid = ak.replace(/[\s,]/g,'').length > 0;
+    let hits = null, method = null;
+    if (bC[ck])                      { hits = bC[ck]; method = 'contributor'; }
+    else if (akValid && bA[ak])      { hits = bA[ak]; method = 'address+city+state'; }
+    else if (nk && bN[nk])           { hits = bN[nk]; method = 'name only'; }
+    if (hits) {
+      for (const m of hits) {
+        const dk = `${ck}||${amt}`;
+        if (!seen.has(dk)) { seen.add(dk); matched.push({ ...row, ...m, _method: method }); }
+      }
+    } else { unmatched.push(row); }
+  }
+  return { matched, unmatched };
+}
+
+function methodTag(m) {
+  if (m === 'contributor')        return `<span class="tag tc">contributor</span>`;
+  if (m === 'address+city+state') return `<span class="tag ta">address match</span>`;
+  return `<span class="tag tn">name only</span>`;
+}
+
+function exportCsv(rows, fname) {
+  if (!rows.length) return;
+  const hs = Object.keys(rows[0]);
+  const esc = v => { const s = String(v ?? ''); return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g,'""')}"` : s; };
+  const csv = [hs.join(','), ...rows.map(r => hs.map(h => esc(r[h])).join(','))].join('\n');
+  Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
+    download: fname,
+  }).click();
+}
+
+// Assign a stable color to each unique segment value
+const SEG_PALETTES = [
+  {bg:'#f0e6ff',border:'#c084fc40',color:'#5b21b6'},
+  {bg:'#fce7f3',border:'#f472b640',color:'#9d174d'},
+  {bg:'#dbeafe',border:'#60a5fa40',color:'#1e3a8a'},
+  {bg:'#d1fae5',border:'#34d39940',color:'#065f46'},
+  {bg:'#fef9c3',border:'#facc1540',color:'#713f12'},
+  {bg:'#ffedd5',border:'#fb923c40',color:'#7c2d12'},
+  {bg:'#e0f2fe',border:'#38bdf840',color:'#0c4a6e'},
+  {bg:'#fce7f3',border:'#e879f940',color:'#701a75'},
+];
+const segColorMap = {};
+let segColorIdx = 0;
+function segColor(val) {
+  if (!segColorMap[val]) {
+    segColorMap[val] = SEG_PALETTES[segColorIdx % SEG_PALETTES.length];
+    segColorIdx++;
+  }
+  return segColorMap[val];
+}
+function resetSegColors() { for (const k in segColorMap) delete segColorMap[k]; segColorIdx = 0; }
+
+function segmentTag(val) {
+  const {bg,border,color} = segColor(val);
+  return `<span class="tag" style="background:${bg};border-color:${border};color:${color}">${val}</span>`;
+}
+function parseAmt(v) {
+  const n = parseFloat(String(v||'').replace(/[$,\s]/g,''));
+  return isNaN(n) ? 0 : n;
+}
+function fmtAmt(n) {
+  return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function findSegmentCol(matched) {
+  if (!matched.length) return null;
+  const keys = Object.keys(matched[0]);
+  const candidates = ['_list','list','List','LIST','source_code','Source_Code','SOURCE_CODE',
+    'sourcecode','SourceCode','SOURCECODE','segment','Segment','SEGMENT','mail_list','MailList'];
+  return candidates.find(c => keys.includes(c) && matched.some(r => String(r[c]||'').trim())) || null;
+}
+
+function buildSegmentBreakdown(matched, hasAmt) {
+  const col = findSegmentCol(matched);
+  if (!col) return '';
+  const counts = {}, amts = {};
+  for (const r of matched) {
+    const v = String(r[col] || '').trim() || '(blank)';
+    counts[v] = (counts[v] || 0) + 1;
+    amts[v] = (amts[v] || 0) + parseAmt(r[donorColMap.amount]);
+  }
+  const rows = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  return `
+    <div class="sec-lbl" style="margin-bottom:6px">By segment <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#bbb;font-size:10px">— ${col}</span></div>
+    ${rows.map(([seg, n]) => `
+      <div class="mrow">
+        ${segmentTag(seg)}
+        <span>
+          <span class="mc">${n.toLocaleString()}</span>
+          <span class="mp">(${((n/matched.length)*100).toFixed(1)}%)</span>
+          ${hasAmt ? `<span class="mp" style="margin-left:6px;color:#2d6a1e;font-weight:500">${fmtAmt(amts[seg])}</span>` : ''}
+        </span>
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderResults() {
+  if (!lastResults) return;
+  const { matched, unmatched } = lastResults;
+  const total = donorParsed.data.length;
+  const rate = ((matched.length / Math.max(total, 1)) * 100).toFixed(1);
+  const curRows = curTab === 'matched' ? matched : unmatched;
+  const pageRows = curRows.slice(curPage * PAGE, (curPage + 1) * PAGE);
+  const totalPages = Math.ceil(curRows.length / PAGE);
+  const hasAmt = donorColMap.amount && matched.some(r => parseAmt(r[donorColMap.amount]) > 0);
+  const totalAmt = hasAmt ? matched.reduce((s,r) => s + parseAmt(r[donorColMap.amount]), 0) : 0;
+  const methods = ['contributor','address+city+state','name only'].map(m => {
+    const rows = matched.filter(x => x._method === m);
+    return { m, n: rows.length, amt: rows.reduce((s,r) => s + parseAmt(r[donorColMap.amount]), 0) };
+  });
+
+  // Determine which segment column to show — typed label → _list, otherwise sniff mail columns
+  resetSegColors();
+  const segCol = findSegmentCol(matched);  // e.g. '_list', 'list', 'source_code', etc.
+  const keyDC = Object.values(donorColMap).filter(Boolean);
+  // Build table headers: always _method first, then segment col if found, then donor cols (deduped)
+  const matchedHeaders = segCol
+    ? ['_method', segCol, ...keyDC.filter(c => c !== segCol)]
+    : ['_method', ...keyDC];
+  const theaders = curTab === 'matched' ? matchedHeaders : keyDC;
+
+  const segBreakdown = buildSegmentBreakdown(matched, hasAmt);
+
+  const el = document.getElementById('results');
+  el.classList.remove('hidden');
+  el.innerHTML = `
+    <hr class="divider" style="margin-top:0">
+    <div class="stats" style="margin-bottom:1rem">
+      <div class="stat"><div class="stat-n v-a">${total.toLocaleString()}</div><div class="stat-l">Total donors</div></div>
+      <div class="stat"><div class="stat-n v-g">${matched.length.toLocaleString()}</div><div class="stat-l">Matched</div>${hasAmt?`<div style="font-size:11px;color:#2d6a1e;margin-top:3px;font-weight:500">${fmtAmt(totalAmt)}</div>`:''}</div>
+      <div class="stat"><div class="stat-n v-r">${unmatched.length.toLocaleString()}</div><div class="stat-l">Unmatched</div></div>
+      <div class="stat"><div class="stat-n v-b">${rate}%</div><div class="stat-l">Match rate</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1rem">
+      <div>
+        <div class="sec-lbl" style="margin-bottom:6px">Method breakdown</div>
+        ${methods.map(({m, n, amt}) => `
+          <div class="mrow">
+            ${methodTag(m)}
+            <span>
+              <span class="mc">${n.toLocaleString()}</span>
+              <span class="mp">(${matched.length > 0 ? ((n / matched.length) * 100).toFixed(1) : 0}%)</span>
+              ${hasAmt && n > 0 ? `<span class="mp" style="margin-left:6px;color:#2d6a1e;font-weight:500">${fmtAmt(amt)}</span>` : ''}
+            </span>
+          </div>
+        `).join('')}
+      </div>
+      <div>${segBreakdown}</div>
+    </div>
+    <button class="dl-btn primary-dl" onclick="exportCsv(lastResults.matched, 'matched.csv')">↓ Download matched CSV</button>
+    <button class="dl-btn" onclick="exportCsv(lastResults.unmatched, 'unmatched.csv')">↓ Download unmatched CSV</button>
+    <div style="margin-top:1.25rem">
+      <div class="tabs">
+        <button class="tab${curTab === 'matched' ? ' on' : ''}" onclick="curTab='matched';curPage=0;renderResults()">Matched ${matched.length.toLocaleString()}</button>
+        <button class="tab${curTab === 'unmatched' ? ' on' : ''}" onclick="curTab='unmatched';curPage=0;renderResults()">Unmatched ${unmatched.length.toLocaleString()}</button>
+      </div>
+      ${curRows.length === 0 ? '<div class="empty">No records in this category</div>' : `
+        <div class="tw">
+          <table>
+            <thead><tr>${theaders.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+            <tbody>
+              ${pageRows.map(row => `<tr>${theaders.map(h => `
+                <td title="${String(row[h] ?? '').replace(/"/g,'&quot;')}">
+                  ${h === '_method' ? methodTag(row[h]) : h === segCol ? segmentTag(String(row[h] ?? '')) : String(row[h] ?? '')}
+                </td>`).join('')}</tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="pag">
+          <span class="pi">${curPage * PAGE + 1}–${Math.min((curPage + 1) * PAGE, curRows.length)} of ${curRows.length.toLocaleString()}</span>
+          <div style="display:flex;gap:6px">
+            <button class="pbtn" ${curPage === 0 ? 'disabled' : ''} onclick="curPage--;renderResults()">‹ Prev</button>
+            <button class="pbtn" ${curPage >= totalPages - 1 ? 'disabled' : ''} onclick="curPage++;renderResults()">Next ›</button>
+          </div>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function showErr(msg) {
+  const b = document.getElementById('err-box');
+  b.textContent = msg;
+  b.classList.remove('hidden');
+}
+
+document.getElementById('run-btn').addEventListener('click', () => {
+  document.getElementById('err-box').classList.add('hidden');
+  try {
+    const entries = mailEntries.map(e => ({ rows: e.rows, colMap: e.colMap, label: e.label }));
+    lastResults = runMatch(donorParsed.data, donorColMap, buildLookups(entries));
+    curTab = 'matched'; curPage = 0;
+    renderResults();
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch(e) { showErr('Processing error: ' + e.message); }
+});
+</script>
+</body>
+</html>
