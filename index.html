@@ -32,9 +32,16 @@
   .field input:focus,.field select:focus{outline:none;border-color:#8b5e0a}
   .sec-lbl{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px}
   .divider{border:none;border-top:0.5px solid #e5e5e5;margin:1.5rem 0}
-  .run-btn{width:100%;padding:11px;font-size:14px;font-weight:500;border-radius:8px;border:none;background:#1a1a1a;color:#fff;cursor:pointer;transition:opacity 0.15s}
+  .run-btn{width:100%;padding:11px;font-size:14px;font-weight:500;border-radius:8px;border:none;background:#1a1a1a;color:#fff;cursor:pointer;transition:opacity 0.15s;display:flex;align-items:center;justify-content:center;gap:8px}
   .run-btn:hover{opacity:0.85}
   .run-btn:disabled{opacity:0.3;cursor:not-allowed}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
+  .loading-bar{height:3px;background:#f5f5f3;border-radius:3px;overflow:hidden;margin-top:8px}
+  .loading-bar-inner{height:100%;background:#8b5e0a;border-radius:3px;animation:indeterminate 1.4s ease infinite}
+  @keyframes indeterminate{0%{transform:translateX(-100%) scaleX(0.5)}50%{transform:translateX(0%) scaleX(0.5)}100%{transform:translateX(100%) scaleX(0.5)}}
+  .drop-loading{display:none;align-items:center;gap:8px;justify-content:center;padding:1.5rem;font-size:13px;color:#8b5e0a}
+  .drop-loading .spinner{border-top-color:#8b5e0a;border-color:rgba(139,94,10,0.2);border-top-color:#8b5e0a}
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.25rem}
   .stat{background:#f5f5f3;border-radius:8px;padding:12px}
   .stat-n{font-size:20px;font-weight:600;font-family:'SF Mono',Menlo,monospace}
@@ -78,12 +85,13 @@
   <p class="sub">Matches donors back to mail list segments using a 3-pass normalization approach.</p>
 
   <div class="section">
-    <div class="lbl">Mailed List</div>
+    <div class="lbl">Mail list files</div>
     <div class="drop" id="mail-drop">
       <input type="file" id="mail-input" accept=".csv,.xlsx,.xls" multiple>
       <div class="drop-icon">↑</div>
       <div class="drop-label"><strong>Upload mail list file(s)</strong> — accepts .csv, .xlsx, .xls, multiple OK</div>
     </div>
+    <div class="drop-loading" id="mail-loading"><div class="spinner"></div><span id="mail-loading-text">Reading files…</span></div>
     <div id="mail-entries"></div>
   </div>
 
@@ -94,6 +102,7 @@
       <div class="drop-icon">↑</div>
       <div class="drop-label"><strong>Upload donor file</strong> — accepts .csv, .xlsx, .xls</div>
     </div>
+    <div class="drop-loading" id="donor-loading"><div class="spinner"></div><span>Reading file…</span></div>
     <div id="donor-set" class="hidden">
       <div class="fset">
         <div><span class="fname" id="donor-fname"></span><span class="frows" id="donor-frows"></span></div>
@@ -123,7 +132,45 @@ function ct(s) {
   return p[0] || s.replace(/\s+/g,'');
 }
 const CK  = (l,f,c,st) => `${ct(l)}, ${ct(f)}(${Nu(c)},${Nu(st)})`;
-const AK  = (a,c,st)   => `${Nu(a)} ${Nu(c)},${Nu(st)}`;
+// Address standardization for match key only — output address is never modified
+function normalizeAddr(s) {
+  let a = Nu(s);
+
+  // Normalize # unit notation before anything else
+  // #APT5 or #APT 5 → APT 5
+  a = a.replace(/#\s*([A-Z]+)\s*(\d+)/g, '$1 $2');
+  // #5 or # 5 → APT 5
+  a = a.replace(/#\s*(\d+)/g, 'APT $1');
+
+  // Street type abbreviations (whole word match)
+  const STREET = {
+    'STREET':'ST','AVENUE':'AVE','BOULEVARD':'BLVD','DRIVE':'DR','ROAD':'RD',
+    'COURT':'CT','LANE':'LN','PLACE':'PL','CIRCLE':'CIR','TRAIL':'TRL',
+    'PARKWAY':'PKWY','HIGHWAY':'HWY','TERRACE':'TER','EXPRESSWAY':'EXPY',
+    'FREEWAY':'FWY','ALLEY':'ALY','CROSSING':'XING','CRESCENT':'CRES',
+    'RIDGE':'RDG','GROVE':'GRV','HOLLOW':'HOLW','MEADOW':'MDW',
+  };
+  // Directionals (whole word)
+  const DIR = {
+    'NORTHEAST':'NE','NORTHWEST':'NW','SOUTHEAST':'SE','SOUTHWEST':'SW',
+    'NORTH':'N','SOUTH':'S','EAST':'E','WEST':'W',
+  };
+  // Unit type abbreviations
+  const UNIT = {
+    'APARTMENT':'APT','SUITE':'STE','FLOOR':'FL','BUILDING':'BLDG',
+    'ROOM':'RM','SPACE':'SPC',
+  };
+
+  // Apply all replacements as whole words
+  // Note: longer forms first (NORTHEAST before NORTH etc.) — objects preserve insertion order above
+  for (const [full, abbr] of [...Object.entries(DIR), ...Object.entries(STREET), ...Object.entries(UNIT)]) {
+    a = a.replace(new RegExp('\\b' + full + '\\b', 'g'), abbr);
+  }
+
+  return a.replace(/\s+/g, ' ').trim();
+}
+
+const AK  = (a,c,st)   => `${normalizeAddr(a)} ${Nu(c)},${Nu(st)}`;
 const NMK = (l,f)      => { const v = `${ct(l)}${ct(f)}`; return v.length > 2 ? v : null; };
 
 // Parse "First Last" (space-separated) combined name — mirrors the Stata addressee logic:
@@ -139,12 +186,12 @@ function parseSpaceName(s) {
 }
 
 const MHINTS = {
-  first:   ['first_name','firstname','first','donorfirstname','donorfirst','Donor First Name'],
-  last:    ['last_name','lastname','last','donorlastname','donorlast','Donor Last Name'],
-  address: ['address','addr','street','donoraddr1','Donor Addr1'],
-  city:    ['city','donorcity','Donor City','mailingcity','hcity'],
-  state:   ['state','st','donorstate','Donor State','mailingstate','hstate'],
-  zip:     ['zip','zipcode','postalcode','donorzip','Donor Zip','mailingzip','hzip'],
+  first:   ['first_name','firstname','first'],
+  last:    ['last_name','lastname','last'],
+  address: ['address','addr','street'],
+  city:    ['city'],
+  state:   ['state','st'],
+  zip:     ['zip','zipcode','postalcode'],
 };
 const DHINTS = {
   ...MHINTS,
@@ -264,16 +311,24 @@ document.getElementById('donor-input').addEventListener('change', async function
 });
 
 async function handleMailFiles(files) {
+  const loading = document.getElementById('mail-loading');
+  const loadingText = document.getElementById('mail-loading-text');
+  loading.style.display = 'flex';
+  loadingText.textContent = files.length > 1 ? `Reading ${files.length} files…` : 'Reading file…';
   for (const file of files) {
+    loadingText.textContent = `Reading ${file.name}…`;
     try {
       const p = await readAny(file);
       mailEntries.push({ file, sheets: p.sheets, sheet: p.sheet, headers: p.headers, rows: p.data, colMap: autoMap(p.headers, MHINTS), label: '', isCsv: p.isCsv });
     } catch(e) { showErr('Error reading ' + file.name + ': ' + e.message); }
   }
+  loading.style.display = 'none';
   renderMailEntries();
 }
 
 async function handleDonorFile(file) {
+  const loading = document.getElementById('donor-loading');
+  loading.style.display = 'flex';
   try {
     const p = await readAny(file);
     donorParsed = p;
@@ -285,6 +340,7 @@ async function handleDonorFile(file) {
     renderDonorCols();
     checkReady();
   } catch(e) { showErr('Error reading donor file: ' + e.message); }
+  loading.style.display = 'none';
 }
 
 // Use capture phase so these fire before browser default navigation
@@ -583,13 +639,21 @@ function showErr(msg) {
 
 document.getElementById('run-btn').addEventListener('click', () => {
   document.getElementById('err-box').classList.add('hidden');
-  try {
-    const entries = mailEntries.map(e => ({ rows: e.rows, colMap: e.colMap, label: e.label }));
-    lastResults = runMatch(donorParsed.data, donorColMap, buildLookups(entries));
-    curTab = 'matched'; curPage = 0;
-    renderResults();
-    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  } catch(e) { showErr('Processing error: ' + e.message); }
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Running match…';
+  // setTimeout lets the browser repaint with the spinner before the sync match blocks
+  setTimeout(() => {
+    try {
+      const entries = mailEntries.map(e => ({ rows: e.rows, colMap: e.colMap, label: e.label }));
+      lastResults = runMatch(donorParsed.data, donorColMap, buildLookups(entries));
+      curTab = 'matched'; curPage = 0;
+      renderResults();
+      document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch(e) { showErr('Processing error: ' + e.message); }
+    btn.disabled = false;
+    btn.innerHTML = 'Run match';
+  }, 50);
 });
 </script>
 </body>
